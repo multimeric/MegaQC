@@ -13,7 +13,7 @@ from megaqc.extensions import login_manager, db
 from megaqc.public.forms import LoginForm
 from megaqc.user.forms import RegisterForm
 from megaqc.user.models import User
-from megaqc.model.models import Report, PlotConfig, PlotData, PlotCategory
+from megaqc.model.models import Report, PlotConfig, PlotData, PlotCategory, AlertThreshold
 from megaqc.api.utils import get_samples, get_reports_data, get_user_filters, aggregate_new_parameters, get_report_metadata_fields, get_queued_uploads, get_plot_favourites, get_favourite_plot_data, get_dashboards, get_dashboard_data
 from megaqc.utils import settings, flash_errors
 
@@ -287,3 +287,13 @@ def edit_reports():
         report_data=return_data,
         report_meta_fields=get_report_metadata_fields(),
         api_token=current_user.api_token)
+
+@blueprint.route('/alert_thresholds/')
+@login_required
+def alert_thresholds():
+    data = db.session.query(AlertThreshold).all()
+    return render_template(
+        'public/threshold_list.html',
+        thresholds=data
+    )
+

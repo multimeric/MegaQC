@@ -4,20 +4,21 @@ import datetime as dt
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, ForeignKey, Column, Boolean, Integer, Float, Unicode, TIMESTAMP, Binary, DateTime, func
+from sqlalchemy import JSON
 
 from megaqc.database import CRUDMixin
 from megaqc.extensions import db
 
-
 user_plotconfig_map = db.Table('user_plotconfig_map',
-            db.Column('user_id', Integer, db.ForeignKey('users.user_id')),
-            db.Column('plot_config_id', Integer, db.ForeignKey('plot_config.config_id'))
-            )
+                               db.Column('user_id', Integer, db.ForeignKey('users.user_id')),
+                               db.Column('plot_config_id', Integer, db.ForeignKey('plot_config.config_id'))
+                               )
 
 user_sampletype_map = db.Table('user_sampletype_map',
-            db.Column('user_id', Integer, db.ForeignKey('users.user_id')),
-            db.Column('sample_data_type_id', Integer, db.ForeignKey('sample_data_type.sample_data_type_id'))
-            )
+                               db.Column('user_id', Integer, db.ForeignKey('users.user_id')),
+                               db.Column('sample_data_type_id', Integer,
+                                         db.ForeignKey('sample_data_type.sample_data_type_id'))
+                               )
 
 
 class Report(db.Model, CRUDMixin):
@@ -50,7 +51,7 @@ class ReportMeta(db.Model, CRUDMixin):
 class PlotConfig(db.Model, CRUDMixin):
     __tablename__ = 'plot_config'
     config_id = Column(Integer, primary_key=True)
-    config_type = Column(Unicode,  nullable=False)
+    config_type = Column(Unicode, nullable=False)
     config_name = Column(Unicode, nullable=False)
     config_dataset = Column(Unicode, nullable=True)
     data = Column(Unicode, nullable=False)
@@ -142,3 +143,21 @@ class Upload(db.Model, CRUDMixin):
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     modified_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     user_id = Column(Integer, ForeignKey('users.user_id'))
+
+
+class AlertThreshold(db.Model, CRUDMixin):
+    __tablename__ = "alert_threshold"
+    alert_threshold_id = Column(Integer, primary_key=True)
+    threshold = Column(JSON)
+    name = Column(Unicode)
+    description = Column(Unicode)
+    created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
+    modified_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
+
+
+class Alert(db.Model, CRUDMixin):
+    __tablename__ = "alert"
+    alert_id = Column(Integer, primary_key=True)
+    alert_threshold_id = Column(Integer, ForeignKey('alert_threshold.alert_threshold_id'), index=True)
+    message = Column(Unicode)
+    created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
