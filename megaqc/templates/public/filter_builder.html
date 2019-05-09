@@ -1,0 +1,51 @@
+{# This is a re-useable component for any situation where we need to filter sample data #}
+<div class="alert alert-light">
+    <i class="fa fa-info-circle" aria-hidden="true"></i> &nbsp;
+    Filters within a group are applied with <code>AND</code> logic.
+    Different filter groups have <code>OR</code> logic.
+</div>
+
+<div class="card new-filter-group-card">
+    <div class="card-header">Filter Group 1</div>
+    <div class="card-body">
+        <table class="table table-responsive filter-group-table">
+            <thead>
+            <tr>
+                <th style="width:25%;">Type</th>
+                <th style="width:25%;">Key</th>
+                <th style="width:25%;">Comparison</th>
+                <th style="width:25%;">Value</th>
+                <th style="width:100px;">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            </tbody>
+            <tfoot>
+            <tr>
+                <td class="new-filter-type">
+                    <select class="form-control">
+                        <option value="">[ select a filter type ]</option>
+                        <option value="timedelta">Dynamic date range</option>
+                        <option value="daterange">Specific dates</option>
+                        <option value="reportmeta">Report metadata</option>
+                        <option value="samplemeta">Sample data</option>
+                    </select>
+                </td>
+                <td class="new-filter-key"><select class="form-control form-control-chosen" data-placeholder="[ please select a filter type ]" disabled="true"><option></option></select></td>
+                <td class="new-filter-cmp"><select class="form-control form-control-chosen" data-placeholder="[ please select a filter type ]" disabled="true"><option></option></select></td>
+                <td class="new-filter-value"><input class="form-control" disabled="true" type="text" placeholder="[ please select a filter type ]"></td>
+                <td class="new-filter-actions">
+                    <button class="new-filter-add btn btn-sm btn-primary" disabled>
+                        <i class="fa fa-fw fa-plus-square" aria-hidden="true"></i>
+                        Add
+                    </button>
+                </td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+<button class="new-filter-group-add-btn btn btn-outline-primary">
+    <i class="fa fa-fw fa-plus-square" aria-hidden="true"></i>
+    Add new filter group
+</button>

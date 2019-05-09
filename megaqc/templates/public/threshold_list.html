@@ -1,13 +1,11 @@
 {% extends "layout.html" %}
-{% block content %}
-    {% block js %}
-        <script type="text/javascript">
-            $('#builder').queryBuilder({
-                //filters: [ ... ]
-            });
-        </script>
-    {% endblock %}
+{% block js %}
+    <script type="text/javascript" src="/static/js/filter_builder.js"></script>
+    <script type="text/javascript" src="/static/js/threshold_builder.js"></script>
+{% endblock %}
 
+{% block content %}
+    {# Modal for creating new thresholds #}
     <div class="modal fade" id="create_threshold_modal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-xl" role="document">
             <div class="modal-content">
@@ -20,11 +18,30 @@
                     </button>
                 </div>
                 <div class="modal-body">
-                    <div id="builder"></div>
+                    <p>
+                        Create a filter for the sample data that selects potentially interesting or dangerous values.
+                        An alert will be created if this filter returns any data.
+                    </p>
+                    <form>
+                        <div class="form-group">
+                            <label>Alert Name</label>
+                            <input class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Alert Description</label>
+                            <input class="form-control">
+                        </div>
+                    </form>
+                    {% include "public/filter_builder.html" %}
+
+                    <button type="button" class="btn btn-primary float-right" id="submit-threshold">
+                        <span aria-hidden="true">Create</span>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+
 
     <h1>Alert Thresholds</h1>
 
@@ -49,24 +66,28 @@
         {% for threshold in thresholds %}
             <tr>
                 <td>
-                    {threshold.name}
+                    {{ threshold.name }}
                 </td>
                 <td>
-                    {threshold.description}
+                    {{ threshold.description }}
                 </td>
                 <td>
                 </td>
                 <td>
-                    {threshold.created_at}
+                    {{ threshold.created_at }}
                 </td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 
-    <button class="btn btn-lg btn-outline-primary" data-toggle="modal" data-target="#create_threshold_modal">
+    <button class="btn btn-sm btn-outline-primary" data-toggle="modal" data-target="#create_threshold_modal">
         <i class="fa fa-fw fa-plus-square" aria-hidden="true"></i>
         Add
     </button>
+    {#    <button class="btn btn-lg btn-outline-primary" data-toggle="modal" data-target="#create_threshold_modal">#}
+    {#        <i class="fa fa-fw fa-plus-square" aria-hidden="true"></i>#}
+    {#        Add#}
+    {#    </button>#}
 
 {% endblock %}

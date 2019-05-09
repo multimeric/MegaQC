@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block content %}
+    <h1>Alerts</h1>
+
+    {% if alerts | length %}
+        <table class="table">
+            <thead>
+            <tr>
+                <th>
+                    Alert Type
+                </th>
+                <th>
+                    Description
+                </th>
+                <th>
+                    Importance
+                </th>
+                <th>
+                    Date Created
+                </th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for alert in alerts %}
+                <tr>
+                    <td>
+                        {alert.threshold.name}
+                    </td>
+                    <td>
+                        {alert.description}
+                    </td>
+                    <td>
+                        {alert.importance}
+                    </td>
+                    <td>
+                        {alert.created_at}
+                    </td>
+                </tr>
+                </tbody>
+                </table>
+            {% endfor %}
+    {% else %}
+        <h2>You have no alerts</h2>
+    {% endif %}
+
+{% endblock %}

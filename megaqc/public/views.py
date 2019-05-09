@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Public section, including homepage and signup."""
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import bytes
 
@@ -13,11 +14,14 @@ from megaqc.extensions import login_manager, db
 from megaqc.public.forms import LoginForm
 from megaqc.user.forms import RegisterForm
 from megaqc.user.models import User
-from megaqc.model.models import Report, PlotConfig, PlotData, PlotCategory, AlertThreshold
-from megaqc.api.utils import get_samples, get_reports_data, get_user_filters, aggregate_new_parameters, get_report_metadata_fields, get_queued_uploads, get_plot_favourites, get_favourite_plot_data, get_dashboards, get_dashboard_data
+from megaqc.model.models import Report, PlotConfig, PlotData, PlotCategory, AlertThreshold, Alert
+from megaqc.api.utils import get_samples, get_reports_data, get_user_filters, aggregate_new_parameters, \
+    get_report_metadata_fields, get_queued_uploads, get_plot_favourites, get_favourite_plot_data, get_dashboards, \
+    get_dashboard_data
 from megaqc.utils import settings, flash_errors
 
 from sqlalchemy.sql import func, distinct
+from sqlalchemy.orm import joinedload
 from urllib.parse import unquote_plus
 
 blueprint = Blueprint('public', __name__, static_folder='../static')
@@ -28,15 +32,17 @@ def load_user(user_id):
     """Load user by ID."""
     return User.query.get(int(user_id))
 
+
 @blueprint.route('/', methods=['GET', 'POST'])
 def home():
     """Home page."""
     return render_template(
         'public/home.html',
-        num_samples = get_samples(count=True),
-        num_reports = get_reports_data(count=True),
-        num_uploads_processing = get_queued_uploads(count=True, filter_cats=["NOT TREATED", "IN TREATMENT"])
+        num_samples=get_samples(count=True),
+        num_reports=get_reports_data(count=True),
+        num_uploads_processing=get_queued_uploads(count=True, filter_cats=["NOT TREATED", "IN TREATMENT"])
     )
+
 
 @blueprint.route('/login/', methods=['GET', 'POST'])
 def login():
@@ -52,6 +58,7 @@ def login():
         else:
             flash_errors(form)
     return render_template('public/login.html', form=form)
+
 
 @blueprint.route('/logout/')
 @login_required
@@ -69,13 +76,13 @@ def register():
     if form.validate_on_submit():
         user_cnt = db.session.query(User).count()
         u = User.create(
-            username = form.username.data,
-            email = form.email.data,
-            password = form.password.data,
-            first_name = form.first_name.data,
-            last_name = form.last_name.data,
-            active = True,
-            is_admin = True if user_cnt == 0 else False,
+            username=form.username.data,
+            email=form.email.data,
+            password=form.password.data,
+            first_name=form.first_name.data,
+            last_name=form.last_name.data,
+            active=True,
+            is_admin=True if user_cnt == 0 else False,
         )
         flash("Thanks for registering! You're now logged in.", 'success')
         login_user(u)
@@ -91,39 +98,43 @@ def about():
     form = LoginForm(request.form)
     return render_template('public/about.html', form=form)
 
+
 @blueprint.route('/plot_type/')
 def choose_plot_type():
     """Choose plot type."""
     return render_template('public/plot_type.html', num_samples=get_samples(count=True))
 
+
 @blueprint.route('/report_plot/')
 @login_required
 def report_plot():
     # Get the fields from the add-new-filters form
-    return_data = aggregate_new_parameters(current_user,[], False)
-    sample_filters=order_sample_filters()
+    return_data = aggregate_new_parameters(current_user, [], False)
+    sample_filters = order_sample_filters()
     return render_template(
         'public/report_plot.html',
-        db = db,
-        User = User,
-        user_token = current_user.api_token,
-        sample_filters = sample_filters,
-        num_samples = return_data[0],
-        report_fields_json = json.dumps(return_data[1]),
-        sample_fields_json = json.dumps(return_data[2]),
-        report_plot_types = return_data[3]
-        )
+        db=db,
+        User=User,
+        user_token=current_user.api_token,
+        sample_filters=sample_filters,
+        num_samples=return_data[0],
+        report_fields_json=json.dumps(return_data[1]),
+        sample_fields_json=json.dumps(return_data[2]),
+        report_plot_types=return_data[3]
+    )
+
 
 @blueprint.route('/queued_uploads/')
 @login_required
 def queued_uploads():
     return render_template(
         'users/queued_uploads.html',
-        db = db,
-        User = User,
-        user_token = current_user.api_token,
-        uploads = get_queued_uploads()
-        )
+        db=db,
+        User=User,
+        user_token=current_user.api_token,
+        uploads=get_queued_uploads()
+    )
+
 
 @blueprint.route('/dashboards/')
 @login_required
@@ -131,9 +142,10 @@ def list_dashboard():
     """Create a new dashboard."""
     return render_template(
         'users/dashboards.html',
-        dashboards = get_dashboards(User),
-        user_token = current_user.api_token,
+        dashboards=get_dashboards(User),
+        user_token=current_user.api_token,
     )
+
 
 @blueprint.route('/dashboard/create/')
 @blueprint.route('/dashboard/edit/<dashboard_id>')
@@ -142,10 +154,11 @@ def create_dashboard(dashboard_id=None):
     """Create a new dashboard."""
     return render_template(
         'users/create_dashboard.html',
-        dashboard_id = dashboard_id,
-        favourite_plots = get_plot_favourites(User),
-        user_token = current_user.api_token,
+        dashboard_id=dashboard_id,
+        favourite_plots=get_plot_favourites(User),
+        user_token=current_user.api_token,
     )
+
 
 @blueprint.route('/dashboard/view/<dashboard_id>')
 @blueprint.route('/dashboard/view/<dashboard_id>/raw')
@@ -157,11 +170,12 @@ def view_dashboard(dashboard_id):
         abort(404)
     return render_template(
         'public/dashboard.html',
-        dashboard_id = dashboard_id,
-        dashboard = dashboard,
-        raw = request.path.endswith('/raw'),
-        user_token = current_user.api_token,
+        dashboard_id=dashboard_id,
+        dashboard=dashboard,
+        raw=request.path.endswith('/raw'),
+        user_token=current_user.api_token,
     )
+
 
 @blueprint.route('/plot_favourites/')
 @login_required
@@ -169,9 +183,10 @@ def plot_favourites():
     """View and edit saved plots."""
     return render_template(
         'users/plot_favourites.html',
-        favourite_plots = get_plot_favourites(User),
-        user_token = current_user.api_token,
+        favourite_plots=get_plot_favourites(User),
+        user_token=current_user.api_token,
     )
+
 
 @blueprint.route('/plot_favourite/<fav_id>')
 @blueprint.route('/plot_favourite/<fav_id>/raw')
@@ -180,10 +195,11 @@ def plot_favourite(fav_id):
     """View and edit saved plots."""
     return render_template(
         'users/plot_favourite.html',
-        plot_data = get_favourite_plot_data(current_user, fav_id),
-        raw = request.path.endswith('/raw'),
-        user_token = current_user.api_token,
+        plot_data=get_favourite_plot_data(current_user, fav_id),
+        raw=request.path.endswith('/raw'),
+        user_token=current_user.api_token,
     )
+
 
 @blueprint.route('/edit_filters/')
 @login_required
@@ -197,11 +213,12 @@ def edit_filters():
             sample_filter_counts[sf['id']] = get_samples(filters=sf.get('sample_filter_data', []), count=True)
     return render_template(
         'users/organize_filters.html',
-        sample_filters = sample_filters,
-        sample_filter_counts = sample_filter_counts,
-        user_token = current_user.api_token,
-        num_samples = get_samples(count=True)
+        sample_filters=sample_filters,
+        sample_filter_counts=sample_filter_counts,
+        user_token=current_user.api_token,
+        num_samples=get_samples(count=True)
     )
+
 
 def order_sample_filters():
     sample_filters = OrderedDict()
@@ -225,16 +242,17 @@ def distributions():
     sample_filters = order_sample_filters()
     return render_template(
         'public/distributions.html',
-        db = db,
-        User = User,
-        user_token = current_user.api_token,
-        sample_filters = sample_filters,
-        num_samples = return_data[0],
-        report_fields = return_data[1],
-        sample_fields = return_data[2],
-        report_fields_json = json.dumps(return_data[1]),
-        sample_fields_json = json.dumps(return_data[2])
-        )
+        db=db,
+        User=User,
+        user_token=current_user.api_token,
+        sample_filters=sample_filters,
+        num_samples=return_data[0],
+        report_fields=return_data[1],
+        sample_fields=return_data[2],
+        report_fields_json=json.dumps(return_data[1]),
+        sample_fields_json=json.dumps(return_data[2])
+    )
+
 
 @blueprint.route('/trends/')
 @login_required
@@ -244,16 +262,17 @@ def trends():
     sample_filters = order_sample_filters()
     return render_template(
         'public/trends.html',
-        db = db,
-        User = User,
-        user_token = current_user.api_token,
-        sample_filters = sample_filters,
-        num_samples = return_data[0],
-        report_fields = return_data[1],
-        sample_fields = return_data[2],
-        report_fields_json = json.dumps(return_data[1]),
-        sample_fields_json = json.dumps(return_data[2])
-        )
+        db=db,
+        User=User,
+        user_token=current_user.api_token,
+        sample_filters=sample_filters,
+        num_samples=return_data[0],
+        report_fields=return_data[1],
+        sample_fields=return_data[2],
+        report_fields_json=json.dumps(return_data[1]),
+        sample_fields_json=json.dumps(return_data[2])
+    )
+
 
 @blueprint.route('/comparisons/')
 @login_required
@@ -263,16 +282,17 @@ def comparisons():
     sample_filters = order_sample_filters()
     return render_template(
         'public/comparisons.html',
-        db = db,
-        User = User,
-        user_token = current_user.api_token,
-        sample_filters = sample_filters,
-        num_samples = return_data[0],
-        report_fields = return_data[1],
-        sample_fields = return_data[2],
-        report_fields_json = json.dumps(return_data[1]),
-        sample_fields_json = json.dumps(return_data[2])
-        )
+        db=db,
+        User=User,
+        user_token=current_user.api_token,
+        sample_filters=sample_filters,
+        num_samples=return_data[0],
+        report_fields=return_data[1],
+        sample_fields=return_data[2],
+        report_fields_json=json.dumps(return_data[1]),
+        sample_fields_json=json.dumps(return_data[2])
+    )
+
 
 @blueprint.route('/edit_reports/')
 @login_required
@@ -280,7 +300,7 @@ def edit_reports():
     # Get the fields from the add-new-filters form
     user_id = None
     if not current_user.is_admin:
-        user_id=current_user.user_id
+        user_id = current_user.user_id
     return_data = get_reports_data(False, user_id)
     return render_template(
         'public/reports_management.html',
@@ -288,12 +308,28 @@ def edit_reports():
         report_meta_fields=get_report_metadata_fields(),
         api_token=current_user.api_token)
 
+
+@blueprint.route('/alerts/')
+@login_required
+def alerts():
+    data = db.session.query(Alert).options(joinedload(Alert.threshold)).all()
+    return render_template(
+        'public/alerts.html',
+        alerts=data
+    )
+
+
 @blueprint.route('/alert_thresholds/')
 @login_required
 def alert_thresholds():
+    # Use this magic function to get some parameters
+    return_data = aggregate_new_parameters(current_user, [], False)
     data = db.session.query(AlertThreshold).all()
     return render_template(
         'public/threshold_list.html',
-        thresholds=data
+        thresholds=data,
+        user_token=current_user.api_token,
+        num_samples=return_data[0],
+        report_fields_json=json.dumps(return_data[1]),
+        sample_fields_json=json.dumps(return_data[2]),
     )
-

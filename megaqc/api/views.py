@@ -459,7 +459,7 @@ def save_alert_threshold(user, *args, **kwargs):
     data = request.get_json()
     AlertThreshold.create(threshold=data)
     return jsonify({
-        'success': True,
+        'success': True
     })
 
 @api_blueprint.route('/api/get_alert_thresholds', methods=['POST'])

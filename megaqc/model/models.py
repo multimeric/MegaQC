@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, ForeignKey, Column, Boolean, Integer, Float, Unicode, TIMESTAMP, Binary, DateTime, func
 from sqlalchemy import JSON
+import enum
 
 from megaqc.database import CRUDMixin
 from megaqc.extensions import db
@@ -154,6 +155,7 @@ class AlertThreshold(db.Model, CRUDMixin):
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     modified_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
 
+    alerts = relationship("Alert", back_populates='threshold')
 
 class Alert(db.Model, CRUDMixin):
     __tablename__ = "alert"
@@ -161,3 +163,6 @@ class Alert(db.Model, CRUDMixin):
     alert_threshold_id = Column(Integer, ForeignKey('alert_threshold.alert_threshold_id'), index=True)
     message = Column(Unicode)
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
+    importance = Column(Integer)
+
+    threshold = relationship("AlertThreshold", back_populates='alerts')
