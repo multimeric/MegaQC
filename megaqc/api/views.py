@@ -457,7 +457,7 @@ def count_queued_uploads():
 @check_user
 def save_alert_threshold(user, *args, **kwargs):
     data = request.get_json()
-    AlertThreshold.create(threshold=data)
+    AlertThreshold.create(threshold=data['filters'], name=data['meta']['name'], description=data['meta']['description'])
     return jsonify({
         'success': True
     })

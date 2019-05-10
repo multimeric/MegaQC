@@ -10,6 +10,8 @@ import enum
 from megaqc.database import CRUDMixin
 from megaqc.extensions import db
 
+from megaqc.api.utils import build_filter, get_samples
+
 user_plotconfig_map = db.Table('user_plotconfig_map',
                                db.Column('user_id', Integer, db.ForeignKey('users.user_id')),
                                db.Column('plot_config_id', Integer, db.ForeignKey('plot_config.config_id'))
@@ -124,6 +126,18 @@ class Sample(db.Model, CRUDMixin):
     sample_name = Column(Unicode)
     report_id = Column(Integer, ForeignKey('report.report_id'), index=True)
 
+    alerts = relationship("Alert", back_populates='sample')
+
+    # def generate_alerts(self):
+    #     """
+    #     Triggers any alerts that should be created by the creation of this sample
+    #     """
+    #
+    #     for threshold in
+    #     samples = get_samples(self.threshold)
+    #     alerts = [Alert(sample=sample, threshold=self, message='') for sample in samples]
+    #     db.session.bulk_save_objects(alerts)
+
 
 class SampleFilter(db.Model, CRUDMixin):
     __tablename__ = "sample_filter"
@@ -154,15 +168,26 @@ class AlertThreshold(db.Model, CRUDMixin):
     description = Column(Unicode)
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     modified_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
+    importance = Column(Integer)
 
     alerts = relationship("Alert", back_populates='threshold')
+
+    def generate_alerts(self):
+        """
+        Triggers any alerts that should be created by the creation of this alert
+        """
+        samples = get_samples(self.threshold)
+        alerts = [Alert(sample=sample, threshold=self, message='') for sample in samples]
+        db.session.bulk_save_objects(alerts)
+
 
 class Alert(db.Model, CRUDMixin):
     __tablename__ = "alert"
     alert_id = Column(Integer, primary_key=True)
     alert_threshold_id = Column(Integer, ForeignKey('alert_threshold.alert_threshold_id'), index=True)
+    sample_id = Column(Integer, ForeignKey('sample.sample_id'), index=True)
     message = Column(Unicode)
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
-    importance = Column(Integer)
 
     threshold = relationship("AlertThreshold", back_populates='alerts')
+    sample = relationship("Sample", back_populates='alerts')

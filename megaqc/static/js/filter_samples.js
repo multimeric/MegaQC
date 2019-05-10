@@ -9,44 +9,7 @@
 //   window.report_fields
 //   window.sample_fields
 //   window.num_matching_samples
-
-window.data_cmp = {
-    "in": "Contains string",
-    "not in": "Does not contain string",
-    "eq": "(=) Equal to",
-    "ne": "(!=) Not equal to",
-    "le": "(&le;) Less than or equal to",
-    "lt": "(&lt;) Less than",
-    "ge": "(&ge;) Greater than or equal to",
-    "gt": "(&gt;) Greater than"
-};
-window.active_filters = [];
-window.filter_error = false;
-window.ajax_update = false;
-window.original_filtermodal = false;
 $(function () {
-    // Add new filter GROUP button
-    $('body').on('click', '.new-filter-group-add-btn', function (e) {
-        new_group_card = $('.new-filter-group-card').first().clone();
-        var new_idx = $('.new-filter-group-card').length + 1;
-        new_group_card.find('.card-header').html(
-            '<button class="new-filter-group-delete btn btn-sm btn-outline-secondary float-right">Delete</button>' +
-            'Filter Group ' + new_idx);
-        new_group_card.find('tbody').html('');
-        new_group_card.find('.new-filter-add').prop('disabled', true);
-        new_group_card.find('.new-filter-key').html('<select disabled class="form-control"><option value="">[ please select a filter type ]<option></select>');
-        new_group_card.find('.new-filter-cmp').html('<select disabled class="form-control"><option value="">[ please select a filter type ]<option></select>');
-        new_group_card.find('.new-filter-value').html('<input disabled class="form-control" type="text" placeholder="[ please select a filter type ]">');
-        new_group_card.hide().insertBefore($(this)).slideDown();
-    });
-
-    // Delete new filter GROUP
-    $('body').on('click', '.new-filter-group-delete', function (e) {
-        $(this).closest('.new-filter-group-card').slideUp(function () {
-            $(this).remove();
-        });
-    });
-
     // When the builder is updated, send an AJAX request to fetch the list of samples
     $('.new-filter-group-card').on('builder:updated', function () {
         // Call the AJAX endpoint to update the page

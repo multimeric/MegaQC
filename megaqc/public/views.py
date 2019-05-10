@@ -312,12 +312,26 @@ def edit_reports():
 @blueprint.route('/alerts/')
 @login_required
 def alerts():
+    """
+    Endpoint for all alerts, from any threshold
+    """
     data = db.session.query(Alert).options(joinedload(Alert.threshold)).all()
     return render_template(
         'public/alerts.html',
         alerts=data
     )
 
+@blueprint.route('/alert_thresholds/<id>/alerts')
+@login_required
+def alerts_threshold_alerts(id):
+    """
+    Endpoint for all alerts, from any threshold
+    """
+    data = db.session.query(Alert).options(joinedload(Alert.threshold)).all()
+    return render_template(
+        'public/alerts.html',
+        alerts=data
+    )
 
 @blueprint.route('/alert_thresholds/')
 @login_required

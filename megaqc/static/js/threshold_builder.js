@@ -10,43 +10,42 @@
 //   window.sample_fields
 //   window.num_matching_samples
 
-window.data_cmp = {
-    "in": "Contains string",
-    "not in": "Does not contain string",
-    "eq": "(=) Equal to",
-    "ne": "(!=) Not equal to",
-    "le": "(&le;) Less than or equal to",
-    "lt": "(&lt;) Less than",
-    "ge": "(&ge;) Greater than or equal to",
-    "gt": "(&gt;) Greater than"
-};
-window.active_filters = [];
-window.filter_error = false;
-window.ajax_update = false;
-window.original_filtermodal = false;
 $(function () {
-// Save report filters
+
+    function validateForm() {
+        var formValid = $('#threshold_meta')[0].reportValidity();
+
+        var filterValid = window.active_filters.length > 0;
+
+        if (!filterValid)
+            toastr.error('Please add one or more filters');
+
+        return filterValid && formValid;
+    }
+
+    // Submit the new threshold
     $('#submit-threshold').click(function (e) {
         e.preventDefault();
         $('#sample-filters-save input').removeClass('is-invalid');
-        // Check that there wasn't an error with the filters
-        if (window.filter_error) {
-            toastr.error('There was an error applying your filters.');
-            return false;
-        }
 
         // Cancel any running ajax calls
         if (window.ajax_update !== false) {
             window.ajax_update.abort();
         }
+
+        // Stop submission if our data isn't valid
+        if (!validateForm())
+            return;
+
         // Call the AJAX endpoint to save the filters
         var new_filters = {
             'filters': window.active_filters,
-            'meta': {
-                'name': $('#filters_name').val(),
-                'set': $('#filters_set').val(),
-                'is_public': ($('#filters_visiblity').val() == 'Everyone')
-            }
+            'meta': $('#threshold_meta')
+                .serializeArray()
+                .reduce(function (acc, curr) {
+                    acc[curr.name] = curr.value;
+                    return acc;
+                }, {})
         };
         window.ajax_update = $.ajax({
             url: '/api/save_alert_threshold',
@@ -62,6 +61,9 @@ $(function () {
                     $('#create_threshold_modal').modal('hide');
                     toastr.success('Alert threshold created successfully!');
                     $('#create_threshold_modal').html(window.original_filtermodal);
+                    window.setTimeout(function () {
+                        location.reload()
+                    }, 2000);
                 }
                 // AJAX data['success'] was false
                 else {

@@ -1431,3 +1431,4 @@ def get_queued_uploads(count=False, filter_cats=None):
                 "message": upload.message
             })
         return ret_data
+
