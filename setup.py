@@ -36,6 +36,7 @@ dev_reqs = [
     "Werkzeug==0.14.1",
     "WTForms>=2.1",
     "dash>=1.0.0",
+    "dash_bootstrap_components",
 
     # Testing
     "pytest==3.0.6",

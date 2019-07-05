@@ -2,12 +2,19 @@ import dash_html_components as html
 import dash_core_components as dcc
 import dash
 import plotly.graph_objs as go
+import json
 from numpy import std, mean, repeat, concatenate, flip
 
 from megaqc.megaqc_dash import MegaQcDash
 from megaqc.extensions import db
-from megaqc.api.utils import get_sample_metadata_fields
+from megaqc.api.utils import get_sample_metadata_fields, aggregate_new_parameters
 from megaqc.model.models import Sample, SampleData, SampleDataType, Report
+from megaqc.public.views import order_sample_filters
+from flask_login import login_required, login_user, logout_user, current_user
+
+import dash_bootstrap_components as dbc
+from megaqc.dash_views.components.field_select import field_select
+from megaqc.dash_views.components.sample_filter import sample_filter
 
 
 def get_field_options():
@@ -93,24 +100,43 @@ def get_plot(fields=[]):
 def layout():
     if app.server is not None and 'SQLALCHEMY_TRACK_MODIFICATIONS' in app.server.config:
         fields = get_field_options()
+        sample_filters = order_sample_filters()
+        return_data = aggregate_new_parameters(current_user, [], False)
+        num_samples = return_data[0]
+        report_fields = return_data[1],
+        sample_fields = return_data[2],
+        report_fields_json = json.dumps(return_data[1]),
+        sample_fields_json = json.dumps(return_data[2])
     else:
         fields = []
+        sample_filters = {}
+        num_samples = 0
 
-    return html.Div(children=[
-        dcc.Location(id='url', refresh=False),
+    return html.Div([
+        html.H1(['Data Trends']),
 
-        html.H1(children='Trends'),
+        dbc.Row([
+            dbc.Col([
+                sample_filter(num_samples=num_samples, sample_filters=sample_filters)
+            ], md=6),
+            dbc.Col([
+                field_select(app),
+            ], md=6)
+        ], className='mb-2'),
 
-        dcc.Dropdown(
-            options=fields,
-            id='field_select',
-            multi=True,
-        ),
-
-        dcc.Graph(
-            id='trend',
-            figure=get_plot()
-        )
+        dbc.Row([
+            dbc.Col([
+                dbc.Card([
+                    dbc.CardBody([
+                        html.H4("Trend Plot", className="card-title"),
+                        dcc.Graph(
+                            id='trend',
+                            figure=get_plot()
+                        )
+                    ])
+                ])
+            ])
+        ])
     ])
 
 
