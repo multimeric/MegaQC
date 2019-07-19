@@ -1,6 +1,7 @@
 import dash_html_components as html
 import dash_core_components as dcc
 import dash
+from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import json
 from numpy import std, mean, repeat, concatenate, flip
@@ -14,7 +15,7 @@ from flask_login import login_required, login_user, logout_user, current_user
 
 import dash_bootstrap_components as dbc
 from megaqc.dash_views.components.field_select import field_select
-from megaqc.dash_views.components.sample_filter import sample_filter
+from megaqc.dash_views.components.sample_filter import SampleFilter
 
 
 def get_field_options():
@@ -24,7 +25,7 @@ def get_field_options():
     return [{'label': d['nicename'], 'value': d['type_id']} for d in fields]
 
 
-def get_plot(fields=[]):
+def get_plot(fields=[], filter=None):
     plots = []
     for field in fields:
         data = db.session.query(
@@ -97,6 +98,10 @@ def get_plot(fields=[]):
     )
 
 
+app = MegaQcDash(routes_pathname_prefix='/dash/trend/', server=False, suppress_callback_exceptions=True)
+sample_filter = SampleFilter()
+
+
 def layout():
     if app.server is not None and 'SQLALCHEMY_TRACK_MODIFICATIONS' in app.server.config:
         fields = get_field_options()
@@ -112,12 +117,13 @@ def layout():
         sample_filters = {}
         num_samples = 0
 
+
     return html.Div([
         html.H1(['Data Trends']),
 
         dbc.Row([
             dbc.Col([
-                sample_filter(num_samples=num_samples, sample_filters=sample_filters)
+                sample_filter.layout(num_samples=num_samples, sample_filters=sample_filters, app=app)
             ], md=6),
             dbc.Col([
                 field_select(app),
@@ -140,15 +146,23 @@ def layout():
     ])
 
 
-app = MegaQcDash(routes_pathname_prefix='/dash/trend/', server=False)
+def setup_callbacks(app):
+    sample_filter.setup_callbacks(app)
+
+    @app.callback(
+        Output('trend', 'figure'),
+        [
+            Input('field_select', 'value'),
+            Input(sample_filter.outputs['selected-filter'].id, 'data')
+        ]
+    )
+    def update_fields(field, filter):
+        if field is None:
+            field = []
+        return get_plot(field)
+
+
+setup_callbacks(app)
+
+
 app.layout = layout
-
-
-@app.callback(
-    dash.dependencies.Output('trend', 'figure'),
-    [dash.dependencies.Input('field_select', 'value')]
-)
-def update_fields(field):
-    if field is None:
-        field = []
-    return get_plot(field)

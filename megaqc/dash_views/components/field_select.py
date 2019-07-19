@@ -22,9 +22,11 @@ def field_select(app):
         fields = []
 
     return dbc.Card([
+        dbc.CardHeader([
+            "Choose Fields to Plot"
+        ], tag='h4'),
         dbc.CardBody(
             [
-                html.H4("Choose Fields to Plot", className="card-title"),
                 dcc.Dropdown(
                     options=fields,
                     id='field_select',
