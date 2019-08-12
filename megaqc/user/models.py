@@ -32,7 +32,8 @@ class Role(db.Model, CRUDMixin):
     role_id = Column(Integer, primary_key=True)
     name = Column(Unicode, unique=True, nullable=False)
     user_id = Column(Integer, ForeignKey('users.user_id'))
-    user = relationship('User', backref='roles')
+
+    user = relationship('User', back_populates='roles')
 
     def __repr__(self):
         """Represent instance as a unique string."""
@@ -54,6 +55,9 @@ class User(db.Model, CRUDMixin):
     active = Column(Boolean(), default=False)
     is_admin = Column(Boolean(), default=False)
     api_token = Column(Unicode, nullable=True)
+
+    reports = relationship('Report', back_populates='user')
+    roles = relationship('Role', back_populates='user')
 
     def __init__(self, password=None, **kwargs):
         """Create instance."""

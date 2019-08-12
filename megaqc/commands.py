@@ -15,6 +15,7 @@ from sqlalchemy import create_engine
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 
 from megaqc.extensions import db
+from megaqc.database import init_db
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 PROJECT_ROOT = os.path.join(HERE, os.pardir)
@@ -132,26 +133,7 @@ def urls(url, order):
 @click.command()
 @with_appcontext
 def initdb():
-    """ Initialise a new database """
-    if "postgresql" in current_app.config['SQLALCHEMY_DATABASE_URI']:
-        try:
-            create_engine(current_app.config['SQLALCHEMY_DATABASE_URI']).connect().close()
-        except:
-            print("Initializing the postgres user and db")
-            engine = create_engine("postgres://postgres@localhost:5432/postgres")
-            conn = engine.connect()
-            conn.execute("commit")
-            conn.execute("CREATE USER megaqc_user;")
-            conn.execute("commit")
-            conn.execute("CREATE DATABASE megaqc OWNER megaqc_user;")
-            conn.execute("commit")
-            conn.close()
-
-
-    """Initializes the database."""
-    db.metadata.bind=db.engine
-    db.metadata.create_all()
-    print('Initialized the database.')
+    init_db(current_app)
 
 def megaqc_date_type(arg):
     return datetime.strptime(arg, MEGAQC_DATE_FORMAT)

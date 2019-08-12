@@ -35,12 +35,17 @@ dev_reqs = [
     "SQLAlchemy>=1.1.5",
     "Werkzeug==0.14.1",
     "WTForms>=2.1",
+    "flask_restful~=0.3.7",
+    "flask-marshmallow~=0.10.1",
+    "marshmallow-sqlalchemy~=0.17.0",
+    "flask-uploads~=0.2.1",
 
     # Testing
     "pytest==3.0.6",
     "WebTest==2.0.26",
     "factory-boy==2.8.1",
     "livereload==2.5.1",
+    'mixer~=6.1.3'
 
     # Lint and code style
     #"flake8==3.3.0",

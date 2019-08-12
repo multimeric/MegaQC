@@ -25,10 +25,15 @@ class Report(db.Model, CRUDMixin):
 
     __tablename__ = 'report'
     report_id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.user_id'), index=True)
+    # If the user is deleted, we still want to retain the report
+    user_id = Column(Integer, ForeignKey('users.user_id', ondelete='SET NULL'), index=True)
     report_hash = Column(Unicode, index=True, unique=True)
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     uploaded_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
+
+    user = relationship('User', back_populates='reports')
+    report_meta = relationship('ReportMeta', back_populates='report')
+    samples = relationship('Sample', back_populates='report')
 
     def __init__(self, **kwargs):
         """Create instance."""
@@ -44,7 +49,10 @@ class ReportMeta(db.Model, CRUDMixin):
     report_meta_id = Column(Integer, primary_key=True)
     report_meta_key = Column(Unicode, nullable=False)
     report_meta_value = Column(Unicode, nullable=False)
-    report_id = Column(Integer, ForeignKey('report.report_id'), index=True)
+    # If the report is deleted, remove the report metadata
+    report_id = Column(Integer, ForeignKey('report.report_id', ondelete='CASCADE'), index=True)
+
+    report = relationship('Report', back_populates='report_meta')
 
 
 class PlotConfig(db.Model, CRUDMixin):
@@ -106,21 +114,28 @@ class SampleDataType(db.Model, CRUDMixin):
     data_section = Column(Unicode)
     data_key = Column(Unicode, nullable=False)
 
+    sample_data = relationship('SampleData', back_populates='data_type')
 
 class SampleData(db.Model, CRUDMixin):
     __tablename__ = "sample_data"
     sample_data_id = Column(Integer, primary_key=True)
     report_id = Column(Integer, ForeignKey('report.report_id'), index=True)
     sample_data_type_id = Column(Integer, ForeignKey('sample_data_type.sample_data_type_id'))
-    sample_id = Column(Integer, ForeignKey('sample.sample_id'), index=True)
+    sample_id = Column(Integer, ForeignKey('sample.sample_id', ondelete='CASCADE'), index=True)
     value = Column(Unicode)
+
+    sample = relationship('Sample', back_populates='data')
+    data_type = relationship('SampleDataType', back_populates='sample_data')
 
 
 class Sample(db.Model, CRUDMixin):
     __tablename__ = "sample"
     sample_id = Column(Integer, primary_key=True)
     sample_name = Column(Unicode)
-    report_id = Column(Integer, ForeignKey('report.report_id'), index=True)
+    report_id = Column(Integer, ForeignKey('report.report_id', ondelete='CASCADE'), index=True)
+
+    report = relationship('Report', back_populates='samples')
+    data = relationship('SampleData', back_populates='sample')
 
 
 class SampleFilter(db.Model, CRUDMixin):
