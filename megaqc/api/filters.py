@@ -86,7 +86,7 @@ def build_filter_query(filters):
             elif filter['type'] == 'timedelta':
                 # Finding all reports produced between now and some amount of days prior to now
                 clause = Report.created_at.between(
-                    datetime.now() - timedelta(filter['value']),
+                    datetime.now() - timedelta(days=filter['value']),
                     datetime.now()
                 )
 
