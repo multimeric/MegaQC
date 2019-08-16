@@ -2,7 +2,8 @@ from megaqc.model.models import *
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Query
 
-DATE_FORMAT="%Y-%m-%d"
+DATE_FORMAT = "%Y-%m-%d"
+
 
 def add_operator(lhs, op, rhs):
     """
@@ -19,7 +20,9 @@ def add_operator(lhs, op, rhs):
     elif op == 'ge':
         return lhs >= rhs
     elif op == 'gt':
-        return lhs >= rhs
+        return lhs > rhs
+    else:
+        raise ValueError('"op" must have a valid value.')
 
 
 def concat_clauses(clauses, operator):
@@ -38,11 +41,18 @@ def concat_clauses(clauses, operator):
         elif operator == 'and':
             concat &= clause
         elif operator == 'or':
-            concat &= clause
+            concat |= clause
         else:
             raise Exception('Operator must be "and" or "or", not "{}"'.format(operator))
 
     return concat
+
+
+def round_date(date, direction):
+    if direction == 'up':
+        date = date + timedelta(days=1)
+
+    return date.replace(hour=0, minute=0, second=0, microsecond=0)
 
 
 def build_filter_query(filters):
@@ -65,8 +75,12 @@ def build_filter_query(filters):
 
                 # Select reports between the two dates
                 clause = Report.created_at.between(
-                    datetime.strptime(filter['value'][0], DATE_FORMAT),
-                    datetime.strptime(filter['value'][1], DATE_FORMAT) + timedelta(1)
+
+                    # Set the left boundary to midnight on the day indicated, so it covers that entire day
+                    round_date(datetime.strptime(filter['value'][0], DATE_FORMAT), 'down'),
+
+                    # Set the right boundary to midnight on the day after indicated
+                    round_date(datetime.strptime(filter['value'][1], DATE_FORMAT), 'up')
                 )
 
                 # Negate the clause if we want those not in the range
@@ -86,8 +100,8 @@ def build_filter_query(filters):
             elif filter['type'] == 'timedelta':
                 # Finding all reports produced between now and some amount of days prior to now
                 clause = Report.created_at.between(
-                    datetime.now() - timedelta(days=filter['value']),
-                    datetime.now()
+                    round_date(datetime.now() - timedelta(days=filter['value']), 'down'),
+                    round_date(datetime.now(), 'up')
                 )
 
                 # Negate the clause if we want those not in the range

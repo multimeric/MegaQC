@@ -1,15 +1,13 @@
 from megaqc.model import models, schemas
 import pytest
+from tests import factories
 
 
 @pytest.fixture()
-def sample(mix, db):
-    s = mix.blend(
-        models.Sample,
-        report=mix.blend(models.Report),
-        data=mix.cycle(3).blend(models.SampleData)
-    )
-    db.session.add(s)
+def sample(session):
+    s = factories.SampleFactory.build()
+    session.add(s)
+    session.commit()
     return s
 
 

@@ -32,16 +32,8 @@ class Report(db.Model, CRUDMixin):
     uploaded_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
 
     user = relationship('User', back_populates='reports')
-    report_meta = relationship('ReportMeta', back_populates='report')
+    meta = relationship('ReportMeta', back_populates='report')
     samples = relationship('Sample', back_populates='report')
-
-    def __init__(self, **kwargs):
-        """Create instance."""
-        db.Model.__init__(self, **kwargs)
-
-    def __repr__(self):
-        """Represent instance as a unique string."""
-        return '<Report({rid!r})>'.format(rid=self.report_id)
 
 
 class ReportMeta(db.Model, CRUDMixin):
@@ -50,9 +42,9 @@ class ReportMeta(db.Model, CRUDMixin):
     report_meta_key = Column(Unicode, nullable=False)
     report_meta_value = Column(Unicode, nullable=False)
     # If the report is deleted, remove the report metadata
-    report_id = Column(Integer, ForeignKey('report.report_id', ondelete='CASCADE'), index=True)
+    report_id = Column(Integer, ForeignKey('report.report_id', ondelete='CASCADE'), index=True, nullable=False)
 
-    report = relationship('Report', back_populates='report_meta')
+    report = relationship('Report', back_populates='meta')
 
 
 class PlotConfig(db.Model, CRUDMixin):
@@ -116,12 +108,13 @@ class SampleDataType(db.Model, CRUDMixin):
 
     sample_data = relationship('SampleData', back_populates='data_type')
 
+
 class SampleData(db.Model, CRUDMixin):
     __tablename__ = "sample_data"
     sample_data_id = Column(Integer, primary_key=True)
     report_id = Column(Integer, ForeignKey('report.report_id'), index=True)
-    sample_data_type_id = Column(Integer, ForeignKey('sample_data_type.sample_data_type_id'))
-    sample_id = Column(Integer, ForeignKey('sample.sample_id', ondelete='CASCADE'), index=True)
+    sample_data_type_id = Column(Integer, ForeignKey('sample_data_type.sample_data_type_id', ondelete='CASCADE'), nullable=False)
+    sample_id = Column(Integer, ForeignKey('sample.sample_id', ondelete='CASCADE'), index=True, nullable=False)
     value = Column(Unicode)
 
     sample = relationship('Sample', back_populates='data')
@@ -132,7 +125,7 @@ class Sample(db.Model, CRUDMixin):
     __tablename__ = "sample"
     sample_id = Column(Integer, primary_key=True)
     sample_name = Column(Unicode)
-    report_id = Column(Integer, ForeignKey('report.report_id', ondelete='CASCADE'), index=True)
+    report_id = Column(Integer, ForeignKey('report.report_id', ondelete='CASCADE'), index=True, nullable=False)
 
     report = relationship('Report', back_populates='samples')
     data = relationship('SampleData', back_populates='sample')

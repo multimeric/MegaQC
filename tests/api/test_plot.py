@@ -1,12 +1,9 @@
 from flask import url_for
 from plotly.offline import plot
 import json
-import pytest
-import datetime
 
 import megaqc.user.models as user_models
 from megaqc.model import models
-from megaqc.api.filters import build_filter_query, DATE_FORMAT
 
 
 class TestPlotApi:
@@ -40,62 +37,5 @@ class TestPlotApi:
 
         # Test that this is valid plot data
         plot({'data': response.json}, validate=True, auto_open=False)
-
-
-@pytest.fixture()
-def filter_test_types(mix):
-    return [
-        mix.blend(models.SampleDataType, data_key='field_1'),
-        mix.blend(models.SampleDataType, data_key='field_2')
-    ]
-
-
-@pytest.fixture()
-def filter_test_reports(mix, filter_test_types):
-    types = filter_test_types
-    return [
-        mix.blend(
-            models.Report,
-            created_at=datetime.datetime.now() - datetime.timedelta(days=1),
-            samples=[
-                mix.blend(models.Sample, data=[
-                    mix.blend(models.SampleData, type=types[0], value=1),
-                    mix.blend(models.SampleData, type=types[1], value=1),
-                ])
-            ],
-            meta=[
-                mix.blend(models.ReportMeta, report_meta_key='key_1', report_meta_value=1),
-                mix.blend(models.ReportMeta, report_meta_key='key_2', report_meta_value=1),
-            ]
-        ),
-        mix.blend(
-            models.Report,
-            created_at=datetime.datetime.now() - datetime.timedelta(days=2),
-            samples=[
-                mix.blend(models.Sample, data=[
-                    mix.blend(models.SampleData, type=types[0], value=2),
-                    mix.blend(models.SampleData, type=types[1], value=2),
-                ])
-            ],
-            meta=[
-                mix.blend(models.ReportMeta, report_meta_key='key_1', report_meta_value=2),
-                mix.blend(models.ReportMeta, report_meta_key='key_2', report_meta_value=2),
-            ]
-        ),
-        mix.blend(
-            models.Report,
-            created_at=datetime.datetime.now() - datetime.timedelta(days=3),
-            samples=[
-                mix.blend(models.Sample, data=[
-                    mix.blend(models.SampleData, type=types[0], value=3),
-                    mix.blend(models.SampleData, type=types[1], value=3),
-                ])
-            ],
-            meta=[
-                mix.blend(models.ReportMeta, report_meta_key='key_1', report_meta_value=3),
-                mix.blend(models.ReportMeta, report_meta_key='key_2', report_meta_value=3),
-            ]
-        )
-    ]
 
 

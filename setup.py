@@ -43,7 +43,7 @@ dev_reqs = [
     # Testing
     "pytest==3.0.6",
     "WebTest==2.0.26",
-    "factory-boy==2.8.1",
+    "factory-boy~=2.12.0",
     "livereload==2.5.1",
     'mixer~=6.1.3'
 
