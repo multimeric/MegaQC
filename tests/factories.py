@@ -19,29 +19,6 @@ class BaseFactory(SQLAlchemyModelFactory):
         sqlalchemy_session = db.session
 
 
-class SubFactoryList(SubFactory):
-    """Calls a factory 'size' times before the object has been generated.
-
-    Attributes:
-        factory (Factory): the factory to call "size-times"
-        defaults (dict): extra declarations for calling the related factory
-        factory_related_name (str): the name to use to refer to the generated
-            object when calling the related factory
-        size (int|lambda): the number of times 'factory' is called, ultimately
-            returning a list of 'factory' objects w/ size 'size'.
-    """
-
-    def __init__(self, factory, size=2, **defaults):
-        self.size = size
-        super(SubFactoryList, self).__init__(factory, **defaults)
-
-    def generate(self, *args, **kwargs):
-        return [
-            super(SubFactoryList, self).generate(*args, **kwargs)
-            for i in range(self.size if isinstance(self.size, int) else self.size())
-        ]
-
-
 class UserFactory(BaseFactory):
     """User factory."""
 
