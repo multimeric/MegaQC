@@ -5,7 +5,7 @@ from builtins import next, str
 
 import os
 from glob import glob
-from subprocess import call
+from subprocess import call, check_output
 from datetime import datetime
 
 import click
@@ -36,16 +36,11 @@ def test():
               help='Fix imports using isort, before linting')
 def lint(fix_imports):
     """ Lint and check code style """
-    skip = ['requirements']
-    root_files = glob('*.py')
-    root_directories = [
-        name for name in next(os.walk('.'))[1] if not name.startswith('.')]
-    files_and_directories = [
-        arg for arg in root_files + root_directories if arg not in skip]
+    all_py = check_output(['git', 'ls-files', '*.py'], cwd=os.path.realpath(__file__ + '/../..')).decode().split('\n')
 
     def execute_tool(description, *args):
         """Execute a checking tool with its arguments."""
-        command_line = list(args) + files_and_directories
+        command_line = list(args) + all_py
         click.echo('{}: {}'.format(description, ' '.join(command_line)))
         rv = call(command_line)
         if rv != 0:
