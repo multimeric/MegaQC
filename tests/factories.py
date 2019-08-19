@@ -45,10 +45,12 @@ class SubFactoryList(SubFactory):
 class UserFactory(BaseFactory):
     """User factory."""
 
-    username = Sequence(lambda n: 'user{0}'.format(n))
-    email = Sequence(lambda n: 'user{0}@example.com'.format(n))
+    username = Faker('user_name')
+    email = Faker('ascii_email')
     password = PostGenerationMethodCall('set_password', 'example')
     active = True
+    first_name = Faker('first_name')
+    last_name = Faker('last_name')
 
     class Meta:
         """Factory configuration."""
