@@ -53,7 +53,7 @@ class ReportFactory(BaseFactory):
     created_at = Faker('date_time')
     uploaded_at = Faker('date_time')
 
-    # user = SubFactory(UserFactory)
+    user = SubFactory(UserFactory)
     meta = RelatedFactoryList(ReportMetaFactory, 'report', size=3)
     samples = RelatedFactoryList('tests.factories.SampleFactory', 'report', size=3)
 
