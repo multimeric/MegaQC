@@ -36,7 +36,7 @@ def test():
               help='Fix imports using isort, before linting')
 def lint(fix_imports):
     """ Lint and check code style """
-    all_py = check_output(['git', 'ls-files', '*.py'], cwd=os.path.realpath(__file__ + '/../..')).decode().split('\n')
+    all_py = check_output(['git', 'ls-files', '*.py']).decode().split('\n')
 
     def execute_tool(description, *args):
         """Execute a checking tool with its arguments."""
