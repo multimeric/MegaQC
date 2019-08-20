@@ -47,7 +47,6 @@ class ReportFactory(BaseFactory):
     class Meta:
         model = models.Report
 
-    # report_id = Faker('pyint')
     report_hash = Faker('sha1')
     created_at = Faker('date_time')
     uploaded_at = Faker('date_time')
@@ -61,7 +60,6 @@ class SampleFactory(BaseFactory):
     class Meta:
         model = models.Sample
 
-    # sample_id = Faker('pyint')
     sample_name = Faker('word')
 
     report = SubFactory(ReportFactory, samples=[])
@@ -72,7 +70,6 @@ class SampleDataTypeFactory(BaseFactory):
     class Meta:
         model = models.SampleDataType
 
-    sample_data_type_id = Faker('pyint')
     data_section = Faker('word')
     data_key = Faker('word')
 
@@ -81,7 +78,6 @@ class SampleDataFactory(BaseFactory):
     class Meta:
         model = models.SampleData
 
-    sample_data_id = Faker('pyint')
     value = Faker('pyint')
 
     # sample = SubFactory(SampleFactory)
