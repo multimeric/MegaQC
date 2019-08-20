@@ -39,7 +39,6 @@ class ReportMetaFactory(BaseFactory):
     class Meta:
         model = models.ReportMeta
 
-    report_meta_id = Faker('pyint')
     report_meta_key = Faker('word')
     report_meta_value = Faker('pystr')
 
