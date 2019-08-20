@@ -59,6 +59,7 @@ class User(db.Model, CRUDMixin):
 
     reports = relationship('Report', back_populates='user')
     roles = relationship('Role', back_populates='user')
+    filters = relationship('SampleFilter', back_populates='user')
 
     def __init__(self, password=None, **kwargs):
         """Create instance."""

@@ -140,6 +140,8 @@ class SampleFilter(db.Model, CRUDMixin):
     sample_filter_data = Column(Unicode, nullable=False)
     user_id = Column(Integer, ForeignKey('users.user_id'), index=True)
 
+    user = relationship('User', back_populates='filters')
+
 
 class Upload(db.Model, CRUDMixin):
     __tablename__ = "uploads"
