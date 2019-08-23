@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 """The user module."""
-from . import views, rest_api  # noqa
+from . import views  # noqa

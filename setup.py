@@ -37,9 +37,10 @@ dev_reqs = [
     "WTForms>=2.1",
     "flask_restful~=0.3.7",
     "flask-marshmallow~=0.10.1",
-    "marshmallow<3.0.0",
+    "marshmallow~=3.0.1",
     "marshmallow-sqlalchemy~=0.17.0",
     "flask-uploads~=0.2.1",
+    "marshmallow-jsonapi~=0.21.2",
 
     # Testing
     "pytest==3.0.6",

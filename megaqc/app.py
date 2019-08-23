@@ -11,7 +11,7 @@ import jinja2
 import logging
 import markdown
 from flask import Flask, jsonify, render_template, request
-from megaqc import commands, public, user, version, api
+from megaqc import commands, public, user, version, api, rest_api
 from megaqc.extensions import cache, csrf_protect, db, debug_toolbar, login_manager, ma, restful
 from megaqc.scheduler import init_scheduler
 from megaqc.settings import ProdConfig, TestConfig
@@ -65,7 +65,7 @@ def register_blueprints(app):
     csrf_protect.exempt(api.views.api_blueprint)
     app.register_blueprint(api.views.api_blueprint)
     # restful.init_app(api.rest_api.api_bp)
-    app.register_blueprint(api.rest_api.api_bp)
+    app.register_blueprint(rest_api.views.api_bp)
     return None
 
 

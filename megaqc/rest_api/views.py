@@ -2,61 +2,45 @@
 Location of a rewritten API in a RESTful style, with appropriate resources
 Following the JSON API standard where relevant: https://jsonapi.org/format/
 """
-from flask import request, Blueprint, jsonify
+from flask import request, Blueprint, jsonify, make_response
 from flask_restful import Resource, Api, marshal_with
 from sqlalchemy.sql.functions import count
 from sqlalchemy.orm import joinedload, contains_eager
-from flask.globals import current_app
 import os
 from flask_login import login_required, login_user, logout_user, current_user, login_manager
-from uuid import uuid4
 import json
+from http import HTTPStatus
 from numpy import mean, std, repeat, concatenate, flip
 
 from megaqc.api.views import check_user, check_admin
-from megaqc.model import models, schemas
+from megaqc.model import models
 import megaqc.user.models as user_models
 from megaqc.extensions import db, restful
 from megaqc import model
-from megaqc.api.filters import build_filter_query
+from megaqc.rest_api import schemas, filters, utils
 
 api_bp = Blueprint('rest_api', __name__, url_prefix='/rest_api/v1')
 
 
-def get_upload_dir():
-    upload_dir = current_app.config['UPLOAD_FOLDER']
-    if not os.path.isdir(upload_dir):
-        os.mkdir(upload_dir)
-
-    return upload_dir
-
-
-def get_unique_filename():
-    dir = get_upload_dir()
-    while True:
-        proposed = os.path.join(dir, str(uuid4()))
-        if not os.path.exists(proposed):
-            return proposed
-
-
 class ReportList(Resource):
-    def get(self):
+    def get(self, user_id=None):
         """
         Get a list of reports
         """
-        report_meta = db.session.query(
+        query = db.session.query(
             models.Report,
-            # count(models.Sample.sample_id)
-        ).all()
+        )
+        if user_id is not None:
+            query = query.filter(models.Report.user_id == user_id)
 
-        return schemas.ReportSchema(many=True, exclude=['report_meta']).dump(report_meta)
+        return schemas.ReportSchema(many=True).dump(query.all())
 
     @check_user
     def post(self, user):
         """
         Upload a new report
         """
-        file_name = get_unique_filename()
+        file_name = utils.get_unique_filename()
         request.files['report'].save(file_name)
         upload_row = models.Upload.create(
             status="NOT TREATED",
@@ -97,6 +81,24 @@ class Report(Resource):
         db.session.query(models.Report).filter(models.Report.report_id == report_id).delete()
         db.session.commit()
         return {}
+
+
+class ReportMeta(Resource):
+    def get(self, report_id):
+        """
+        Get all data for a sample
+        """
+        # Here we need to prefetch the data and the data type because they will also be dumped to JSON
+        meta = db.session.query(
+            models.ReportMeta
+        ).filter(
+            models.ReportMeta.report_id == report_id
+        ).all()
+
+        return schemas.ReportMetaSchema(many=True).dump(meta)
+
+    def post(self, report_id):
+        return schemas.ReportMetaSchema(many=False).load(request.json)
 
 
 class SamplesList(Resource):
@@ -165,6 +167,26 @@ class Sample(Resource):
         return {}
 
 
+class SampleData(Resource):
+    def get(self, sample_id):
+        """
+        Get all data for a sample
+        """
+        # Here we need to prefetch the data and the data type because they will also be dumped to JSON
+        samples = db.session.query(
+            models.SampleData
+        ).options(
+            joinedload(models.SampleData.data_type)
+        ).filter(
+            models.SampleData.sample_id == sample_id
+        ).all()
+
+        return schemas.SampleDataSchema(many=True, exclude=['report']).dump(samples)
+
+    def post(self, sample_id):
+        return schemas.SampleDataSchema(many=False).load(request.json)
+
+
 class UserList(Resource):
     @check_admin
     def get(self, user):
@@ -177,7 +199,8 @@ class UserList(Resource):
             joinedload(user_models.User.roles)
         ).all()
 
-        return schemas.UserSchema(many=True, exclude=['reports', 'password', 'salt', 'api_token']).dump(users)
+        # Only admins can do this, so it doesn't matter if we return their password/key
+        return schemas.UserSchema(many=True).dump(users)
 
     def post(self):
         """
@@ -296,16 +319,81 @@ class FilterList(Resource):
         return dump_schema.dump(model)
 
 
-
 class Filter(Resource):
-    def get(self, filter_id):
-        pass
+    def get(self, filter_id, user_id=None):
+        query = db.session.query(
+            models.SampleFilter
+        ).join(
+            user_models.User, user_models.User.user_id == models.SampleFilter.user_id
+        ).options(
+            contains_eager(models.SampleFilter.user)
+        ).filter(
+            models.SampleFilter.sample_filter_id == filter_id
+        )
 
-    def put(self, filter_id):
-        pass
+        # If this is the filter list for a single user, filter it down to that
+        if user_id is not None:
+            query = query.filter(user_models.User.user_id == user_id)
+
+        results = query.first_or_404()
+
+        return schemas.SampleFilterSchema(many=False).dump(results)
+
+    @check_user
+    def put(self, filter_id, user, user_id=None):
+        load_schema = schemas.SampleFilterSchema(many=False, exclude=('user', 'id'))
+
+        # Validate the incoming json
+        if request.json is None:
+            return {'errors': errors}, HTTPStatus.BAD_REQUEST
+
+        errors = load_schema.validate(request.json, session=db.session)
+        if len(errors) > 0:
+            return {'errors': errors}, HTTPStatus.BAD_REQUEST
+
+        # Find an instance that meets the user_id and filter_id constraints
+        query = db.session.query(
+            models.SampleFilter
+        ).join(
+            user_models.User, user_models.User.user_id == models.SampleFilter.user_id
+        ).options(
+            contains_eager(models.SampleFilter.user)
+        ).filter(
+            models.SampleFilter.sample_filter_id == filter_id
+        )
+        if user_id is not None:
+            query = query.filter(user_models.User.user_id == user_id)
+        curr_instance = query.first_or_404()
+
+        # Check permissions
+        if not (user.is_admin or curr_instance.user_id == user.user_id):
+            return '', HTTPStatus.UNAUTHORIZED
+
+        # Update the instance
+        new_instance = load_schema.load(request.json, session=db.session, instance=curr_instance).data
+        db.session.add(model)
+        db.session.commit()
+
+        # Dump the new instance as the response
+        dump_schema = schemas.SampleFilterSchema(many=False)
+        return dump_schema.dump(new_instance)
 
     def delete(self, filter_id):
-        pass
+        query = db.session.query(
+            models.SampleFilter
+        ).join(
+            user_models.User, user_models.User.user_id == models.SampleFilter.user_id
+        ).options(
+            contains_eager(models.SampleFilter.user)
+        ).filter(
+            models.SampleFilter.sample_filter_id == filter_id
+        )
+
+        instance = query.first_or_404()
+
+        db.session.delete(instance)
+
+        return {}
 
 
 class TrendSeries(Resource):
@@ -313,7 +401,7 @@ class TrendSeries(Resource):
         filter = json.loads(request.args.get('filter', '[]'))
         fields = json.loads(request.args['fields'])
 
-        query = build_filter_query(filter)
+        query = filters.build_filter_query(filter)
         plots = []
         for field in fields:
 
@@ -375,17 +463,31 @@ class TrendSeries(Resource):
         return jsonify(plots)
 
 
-restful.add_resource(ReportList, '/reports')
+# @restful.representation('application/json')
+# def return_json(data, code, headers=None):
+#     """
+#     Massage the response into a json:api compatible format: https://jsonapi.org/format/
+#     """
+#     if code == HTTPStatus.OK:
+#         ret = {'data': data}
+#     else:
+#         ret = {'errors': data}
+#
+#     resp = make_response(json.dumps(ret), code)
+#     resp.headers.extend(headers or {})
+#     return resp
+
+restful.add_resource(ReportList, '/reports', '/users/<int:user_id>/reports')
 restful.add_resource(Report, '/reports/<int:report_id>')
+restful.add_resource(ReportMeta, '/reports/<int:report_id>/meta')
+
 restful.add_resource(SamplesList, '/reports/<int:report_id>/samples', '/samples')
-restful.add_resource(Sample, '/reports/<int:report_id>/samples/<int:sample_id>', '/samples/<int:sample_id>')
+restful.add_resource(Sample, '/samples/<int:sample_id>')
+restful.add_resource(SampleData, '/samples/<int:sample_id>/data')
 
 restful.add_resource(UserList, '/users')
 restful.add_resource(User, '/users/<int:user_id>')
-# restful.add_resource(DashboardList, '/users/<int:user_id>/dashboards')
-# restful.add_resource(Dashboard, '/users/<int:user_id>/dashboards/<int:dashboard_id>')
-# restful.add_resource(FavouriteList, '/users/<int:user_id>/favourites')
-# restful.add_resource(Favourite, '/users/<int:user_id>/favourites/<int:favourite_id>')
+
 restful.add_resource(TrendSeries, '/plots/trends/series', endpoint='trend_data')
 
 restful.add_resource(FilterList, '/filters', '/users/<int:user_id>/filters')
