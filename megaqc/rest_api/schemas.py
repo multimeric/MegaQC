@@ -17,7 +17,7 @@ from marshmallow_jsonapi.flask import Relationship, Schema
 from megaqc.model.models import *
 from megaqc.user.models import *
 from megaqc.extensions import ma
-from megaqc.rest_api.fields import JsonString, ResourceHyperlink
+from megaqc.rest_api.fields import JsonString
 
 
 class NestedSessionMixin:
@@ -55,15 +55,25 @@ class SampleDataSchema(Schema):
     """
 
     class Meta:
-        type_ = 'report_meta'
-        self_view = 'rest_api.reportmeta'
-        self_kwargs = {
-            'report_id': '<report_id>'
-        }
+        type_ = 'sample_data'
+        # self_view = 'rest_api.sampledata'
+        # self_view_many = 'rest_api.sampledata'
+        # self_view_kwargs = {
+        #     'sample_id': '<sample_id>'
+        # }
 
+    id = fields.Integer(attribute='sample_data_id')
     key = ma.Method('type_key')
     section = ma.Method('type_section')
     value = fields.String()
+    # sample = Relationship(
+    #     related_view='rest_api.sample',
+    #     related_view_kwargs={
+    #         'sample_id': '<sample_id>'
+    #     },
+    #     many=False,
+    #     type_='sample'
+    # )
 
     def type_key(self, obj):
         return obj.data_type.data_key
@@ -79,21 +89,23 @@ class SampleSchema(Schema):
     class Meta:
         type_ = 'sample'
         self_view = 'rest_api.sample'
-        self_kwargs = {
+        self_view_many = 'rest_api.sampleslist'
+        self_view_kwargs = {
             'sample_id': '<id>'
         }
 
     id = fields.Integer(attribute='sample_id')
+    name = fields.String(attribute='sample_name')
     data = Relationship(
         related_view='rest_api.sampledata',
         related_view_kwargs={
             'sample_id': '<sample_id>'
         },
-        include_data=True,
+        # include_resource_linkage=True,
         many=True,
-        type_='sample'
+        type_='sample_data',
+        schema="SampleDataSchema"
     )
-    name = fields.String()
 
 
 # By using this metaclass, we stop all the default fields being copied into the schema, allowing us to rename them
@@ -101,7 +113,7 @@ class SampleFilterSchema(Schema):
     class Meta:
         type_ = "sample_filter"
         self_view = 'rest_api.sample'
-        self_kwargs = {
+        self_view_kwargs = {
             'sample_id': '<id>'
         }
 
@@ -168,7 +180,7 @@ class ReportSchema(Schema):
 class ReportMetaSchema(Schema):
     class Meta:
         type_ = 'report_meta'
-        # self_view= 'rest_api.reportmeta'
+        # self_view = 'rest_api.reportmeta'
         # self_view_kwargs = {
         #     'report_id': '<id>'
         # }

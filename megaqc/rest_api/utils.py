@@ -2,6 +2,7 @@ import os
 from flask.globals import current_app
 from uuid import uuid4
 
+
 def get_upload_dir():
     upload_dir = current_app.config['UPLOAD_FOLDER']
     if not os.path.isdir(upload_dir):

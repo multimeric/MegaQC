@@ -110,7 +110,7 @@ class SamplesList(Resource):
         # Only apply the report filter if we had a report ID
         filters = []
         if report_id is not None:
-            filters.append([models.Sample.report_id == report_id])
+            filters.append(models.Sample.report_id == report_id)
 
         # Here we need to prefetch the data and the data type because they will also be dumped to JSON
         samples = db.session.query(
@@ -121,7 +121,7 @@ class SamplesList(Resource):
             *filters
         ).all()
 
-        return schemas.SampleSchema(many=True, exclude=['report']).dump(samples)
+        return schemas.SampleSchema(many=True).dump(samples)
 
     def post(self, report_id):
         # Currently we only support uploading samples via a report
@@ -141,7 +141,7 @@ class Sample(Resource):
             models.Sample.sample_id == sample_id
         ).first()
 
-        return schemas.SampleSchema(many=False, exclude=['report']).dump(samples)
+        return schemas.SampleSchema(many=False, include_data=['data']).dump(samples)
 
     def put(self, report_id, sample_id):
         """
@@ -181,7 +181,7 @@ class SampleData(Resource):
             models.SampleData.sample_id == sample_id
         ).all()
 
-        return schemas.SampleDataSchema(many=True, exclude=['report']).dump(samples)
+        return schemas.SampleDataSchema(many=True).dump(samples)
 
     def post(self, sample_id):
         return schemas.SampleDataSchema(many=False).load(request.json)
