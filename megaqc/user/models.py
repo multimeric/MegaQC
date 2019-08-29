@@ -58,6 +58,7 @@ class User(db.Model, CRUDMixin):
     api_token = Column(Unicode, nullable=True)
 
     reports = relationship('Report', back_populates='user')
+    uploads = relationship('Upload', back_populates='user')
     roles = relationship('Role', back_populates='user')
     filters = relationship('SampleFilter', back_populates='user')
 

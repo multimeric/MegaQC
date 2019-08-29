@@ -23,11 +23,15 @@ class UserFactory(BaseFactory):
     """User factory."""
 
     username = Faker('user_name')
-    email = Faker('ascii_email')
+    email = Sequence(lambda n: '{}@example.com'.format(n))
     password = PostGenerationMethodCall('set_password', 'example')
     active = True
     first_name = Faker('first_name')
+    salt = Faker('md5')
     last_name = Faker('last_name')
+    created_at = Faker('date_time')
+    api_token = Faker('md5')
+    is_admin = False
 
     class Meta:
         """Factory configuration."""
@@ -41,6 +45,21 @@ class ReportMetaFactory(BaseFactory):
 
     report_meta_key = Faker('word')
     report_meta_value = Faker('pystr')
+
+    report = SubFactory('tests.factories.ReportFactory')
+
+
+class UploadFactory(BaseFactory):
+    class Meta:
+        model = models.Upload
+
+    status = Faker('word')
+    path = Faker('file_path')
+    message = Faker('sentence')
+    created_at = Faker('date_time')
+    modified_at = Faker('date_time')
+
+    user = SubFactory(UserFactory)
 
 
 class ReportFactory(BaseFactory):
@@ -80,5 +99,16 @@ class SampleDataFactory(BaseFactory):
 
     value = Faker('pyint')
 
-    # sample = SubFactory(SampleFactory)
+    sample = SubFactory(SampleFactory, data=[])
     data_type = SubFactory(SampleDataTypeFactory)
+
+
+class SampleFilterFactory(BaseFactory):
+    class Meta:
+        model = models.SampleFilter
+
+    sample_filter_tag = Faker('word')
+    sample_filter_name = Faker('word')
+    is_public = Faker('pybool')
+    sample_filter_data = '[]'
+    user = SubFactory(UserFactory)

@@ -17,6 +17,15 @@ class CRUDMixin(object):
     """Mixin that adds convenience methods for CRUD (create, read, update, delete) operations."""
 
     @classmethod
+    def get_or_create(cls, kwargs):
+        instance = db.session.query(cls).filter_by(**kwargs).first()
+        if instance:
+            return instance
+        else:
+            instance = cls(**kwargs)
+            return instance
+
+    @classmethod
     def create(cls, **kwargs):
         """Create a new record and save it the database."""
         instance = cls(**kwargs)

@@ -152,3 +152,5 @@ class Upload(db.Model, CRUDMixin):
     created_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     modified_at = Column(DateTime, nullable=False, default=dt.datetime.utcnow)
     user_id = Column(Integer, ForeignKey('users.user_id'))
+
+    user = relationship('User', back_populates='uploads')

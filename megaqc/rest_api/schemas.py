@@ -8,11 +8,11 @@ from sqlalchemy.orm.collections import InstrumentedList
 import json
 from six import with_metaclass
 import marshmallow
-from marshmallow import fields
+from marshmallow import fields, post_load
 from marshmallow.schema import SchemaMeta
 from marshmallow.utils import missing
 from marshmallow_jsonapi import fields
-from marshmallow_jsonapi.flask import Relationship, Schema
+from marshmallow_jsonapi.flask import Relationship, Schema as JsonApiSchema
 
 from megaqc.model.models import *
 from megaqc.user.models import *
@@ -20,34 +20,30 @@ from megaqc.extensions import ma
 from megaqc.rest_api.fields import JsonString
 
 
-class NestedSessionMixin:
+class OptionalLinkSchema(JsonApiSchema):
+    def __init__(self, use_links=True, *args, **kwargs):
+        self.use_links = use_links
+        super().__init__(*args, **kwargs)
 
-    @marshmallow.pre_load
-    def set_nested_session(self, data):
-        """Allow nested schemas to use the parent schema's session. This is a
-        longstanding bug with marshmallow-sqlalchemy.
+    def get_resource_links(self, item):
+        if not self.use_links:
+            return None
+        return super().get_resource_links(item)
 
-        https://github.com/marshmallow-code/marshmallow-sqlalchemy/issues/67
-        https://github.com/marshmallow-code/marshmallow/issues/658#issuecomment-328369199
+    @post_load()
+    def remove_empty_id(self, item, **kwargs):
         """
-        nested_fields = {k: v for k, v in self.fields.items() if type(v) == marshmallow.fields.Nested}
-        for field in nested_fields.values():
-            field.schema.session = self.session
-
-
-class SelfNested(fields.Nested):
-    def get_value(self, obj, attr, accessor=None, default=missing):
+        Hack to deal with empty ID field that has to be sent
         """
-        Normally we'd want to access obj[attr], but since we're actually just dumping a subsection of the parent,
-        this isn't needed
-        """
-        return obj
+        id_field = self.fields['id'].attribute
+        if id_field in item and item[id_field] is None:
+            del item[id_field]
 
+        return item
 
-# class SampleDataTypeSchema(Schema):
-#     id = fields.Integer()
-#     section = fields.String()
-#     key = fields.String()
+# Make every schema use this
+Schema = OptionalLinkSchema
+
 
 class SampleDataSchema(Schema):
     """
@@ -62,10 +58,14 @@ class SampleDataSchema(Schema):
         #     'sample_id': '<sample_id>'
         # }
 
-    id = fields.Integer(attribute='sample_data_id')
-    key = ma.Method('type_key')
-    section = ma.Method('type_section')
+    id = fields.String(attribute='sample_data_id', allow_none=True)
+    key = fields.String(attribute='data_type.data_key')
+    section = ma.String(attribute='data_type.data_section')
     value = fields.String()
+
+    # We can't link to the parent sample because of
+    # https://github.com/marshmallow-code/marshmallow-jsonapi/issues/247
+
     # sample = Relationship(
     #     related_view='rest_api.sample',
     #     related_view_kwargs={
@@ -75,17 +75,12 @@ class SampleDataSchema(Schema):
     #     type_='sample'
     # )
 
-    def type_key(self, obj):
-        return obj.data_type.data_key
-
-    def type_section(self, obj):
-        return obj.data_type.data_section
-
 
 class SampleSchema(Schema):
     """
     This is an abstraction of Sample + SampleData + SampleDataType into one object
     """
+
     class Meta:
         type_ = 'sample'
         self_view = 'rest_api.sample'
@@ -94,7 +89,7 @@ class SampleSchema(Schema):
             'sample_id': '<id>'
         }
 
-    id = fields.Integer(attribute='sample_id')
+    id = fields.String(attribute='sample_id', allow_none=True)
     name = fields.String(attribute='sample_name')
     data = Relationship(
         related_view='rest_api.sampledata',
@@ -109,15 +104,16 @@ class SampleSchema(Schema):
 
 
 # By using this metaclass, we stop all the default fields being copied into the schema, allowing us to rename them
-class SampleFilterSchema(Schema):
+class SampleFilterSchema(OptionalLinkSchema):
     class Meta:
         type_ = "sample_filter"
-        self_view = 'rest_api.sample'
+        self_view = 'rest_api.filter'
+        self_view_many = 'rest_api.filterlist'
         self_view_kwargs = {
-            'sample_id': '<id>'
+            'filter_id': '<id>'
         }
 
-    id = fields.Integer(attribute='sample_filter_id')
+    id = fields.String(attribute='sample_filter_id', allow_none=True)
     tag = fields.String(attribute='sample_filter_tag')
     name = fields.String(attribute='sample_filter_name')
     public = fields.Boolean(attribute='is_public')
@@ -126,7 +122,7 @@ class SampleFilterSchema(Schema):
     user = Relationship(
         related_view='rest_api.user',
         related_view_kwargs={
-            'user_id': '<user.id>'
+            'user_id': '<user_id>'
         }
     )
 
@@ -135,6 +131,7 @@ class ReportSchema(Schema):
     """
     This is an abstraction of Report + ReportMeta
     """
+
     class Meta:
         type_ = 'report'
         self_view = 'rest_api.report'
@@ -144,7 +141,7 @@ class ReportSchema(Schema):
         }
         strict = True
 
-    id = fields.Integer(attribute='report_id')
+    id = fields.String(attribute='report_id', allow_none=True)
     hash = fields.String(attribute='report_hash')
     created_at = fields.DateTime()
     uploaded_at = fields.DateTime()
@@ -177,6 +174,34 @@ class ReportSchema(Schema):
     )
 
 
+class UploadSchema(Schema):
+    class Meta:
+        type_ = 'upload'
+        self_view = 'rest_api.upload'
+        self_view_many = 'rest_api.uploadlist'
+        self_view_kwargs = {
+            'upload_id': '<id>'
+        }
+        strict = True
+
+    id = fields.String(attribute='upload_id', allow_none=True)
+    status = fields.String()
+    path = fields.String()
+    message = fields.String()
+    created_at = fields.DateTime()
+    modified_at = fields.DateTime()
+
+    user = Relationship(
+        related_view='rest_api.user',
+        related_view_kwargs={
+            'user_id': '<user_id>'
+        },
+        many=False,
+        type_='user',
+        id_field='user_id'
+    )
+
+
 class ReportMetaSchema(Schema):
     class Meta:
         type_ = 'report_meta'
@@ -185,7 +210,7 @@ class ReportMetaSchema(Schema):
         #     'report_id': '<id>'
         # }
 
-    id = fields.Integer(attribute='report_meta_id')
+    id = fields.String(attribute='report_meta_id', allow_none=True)
     key = fields.String(attribute='report_meta_key')
     value = fields.String(attribute='report_meta_value')
 
@@ -198,7 +223,7 @@ class UserSchema(Schema):
             'user_id': '<id>'
         }
 
-    id = fields.Integer(attribute='user_id')
+    id = fields.String(attribute='user_id', required=False, allow_none=True)
     username = fields.String()
     email = fields.String()
     salt = fields.String()
@@ -216,8 +241,29 @@ class UserSchema(Schema):
             'user_id': '<user_id>'
         },
         many=True,
-        type_='report'
+        type_='report',
+        required=False
     )
+
+
+class PlotSchema(Schema):
+    class Meta:
+        type_ = 'plot'
+
+    id = fields.Constant(-1, dump_only=True, allow_none=True)
+    type = fields.String()
+    x = fields.List(fields.Raw())
+    y = fields.List(fields.Raw())
+    line = fields.Dict()
+    mode = fields.String()
+    name = fields.String()
+
+    # @post_load(pass_many=True)
+    # def remove_id(self, data, many, **kwargs):
+    #     for datum in data:
+    #         del datum['id']
+    #     return data
+
     # roles = fields.Function(lambda obj: [role.name for role in obj.roles])
     # filters = fields.List(ma.HyperlinkRelated('rest_api.filter', url_key='filter_id'))
     # reports = fields.List(ma.HyperlinkRelated('rest_api.report', url_key='report_id'))
@@ -225,3 +271,8 @@ class UserSchema(Schema):
     # class Meta:
     #     model = User
     #     exclude = ('is_admin', 'user_id')
+
+
+class TrendSchema(PlotSchema):
+    x = fields.List(fields.DateTime())
+    y = fields.List(fields.Number())

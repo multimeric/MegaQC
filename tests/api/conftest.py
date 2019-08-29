@@ -1,5 +1,7 @@
 import pytest
 from tests import factories
+from jsonapi_client import Session, Filter, ResourceTuple
+from flask import request
 
 
 @pytest.yield_fixture('function')
@@ -12,6 +14,7 @@ def client(app):
 def token(db):
     user = factories.UserFactory(is_admin=False)
     db.session.add(user)
+    db.session.commit()
     return user.api_token
 
 
@@ -19,6 +22,7 @@ def token(db):
 def admin_token(db):
     user = factories.UserFactory(is_admin=True)
     db.session.add(user)
+    db.session.commit()
     return user.api_token
 
 
@@ -26,3 +30,10 @@ def admin_token(db):
 def session(db):
     sess = db.session
     return sess
+
+@pytest.fixture()
+def jpi(app):
+    """
+    JSON API client
+    """
+    return Session(request.base_url)

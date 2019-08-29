@@ -4,7 +4,7 @@ import pytest
 from tests import factories
 
 from megaqc.model import models
-from megaqc.api.filters import build_filter_query, DATE_FORMAT
+from megaqc.rest_api.filters import build_filter_query, DATE_FORMAT
 
 
 def unique(result, column):
@@ -74,6 +74,7 @@ def filter_test_reports(filter_test_types, session):
             ]
         )
     ]
+    session.expunge_all()
     session.add_all(ret)
     session.commit()
     return ret

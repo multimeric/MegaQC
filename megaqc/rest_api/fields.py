@@ -9,8 +9,9 @@ class JsonString(ma.Field):
     Serializes a JSON structure as JSON, but deserializes it as a string (for DB storage)
     """
 
-    def _serialize(self, value, attr, obj):
+    def _serialize(self, value, attr, obj, **kwargs):
         return json.loads(value)
 
-    def _deserialize(self, value, attr, data):
+    def _deserialize(self, value, attr, data, **kwargs):
         return json.dumps(value)
+

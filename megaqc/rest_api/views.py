@@ -22,6 +22,79 @@ from megaqc.rest_api import schemas, filters, utils
 api_bp = Blueprint('rest_api', __name__, url_prefix='/rest_api/v1')
 
 
+class UploadList(Resource):
+    @check_user
+    def get(self, user, user_id=None):
+        """
+        Get a list of pending uploads
+        """
+        query = db.session.query(
+            models.Upload,
+        )
+        if user_id is not None:
+            query = query.filter(models.Upload.user_id == user_id)
+
+        # Only show the filepath if they're an admin
+        exclude = [] if user.is_admin else ['path']
+
+        return schemas.UploadSchema(many=True, exclude=exclude).dump(query.all())
+
+    @check_user
+    def post(self, user):
+        """
+        Upload a new report
+        """
+        # This doesn't exactly follow the JSON API spec, since it doesn't exactly support file uploads:
+        # https://github.com/json-api/json-api/issues/246
+        file_name = utils.get_unique_filename()
+        request.files['report'].save(file_name)
+        upload_row = models.Upload.create(
+            status="NOT TREATED",
+            path=file_name,
+            message="File has been created, loading in MegaQC is queued.",
+            user_id=user.user_id
+        )
+
+        # Only show the filepath if they're an admin
+        exclude = [] if user.is_admin else ['path']
+
+        return schemas.UploadSchema(exclude=exclude).dump(upload_row), HTTPStatus.CREATED
+
+
+class Upload(Resource):
+    @check_user
+    def get(self, upload_id, user, user_id=None):
+        """
+        Get data about a single upload
+        """
+        upload = db.session.query(
+            models.Upload,
+        ).filter(
+            models.Upload.upload_id == upload_id
+        ).first_or_404()
+
+        # Only show the filepath if they're an admin
+        exclude = [] if user.is_admin else ['path']
+
+        return schemas.UploadSchema(many=False, exclude=exclude).dump(upload)
+
+    @check_admin
+    def delete(self, upload_id, user, user_id=None):
+        """
+        Get data about a single upload
+        """
+        upload = db.session.query(
+            models.Upload,
+        ).filter(
+            models.Upload.upload_id == upload_id
+        ).first_or_404()
+
+        db.session.delete(upload)
+        db.session.commit()
+
+        return {}
+
+
 class ReportList(Resource):
     def get(self, user_id=None):
         """
@@ -40,16 +113,7 @@ class ReportList(Resource):
         """
         Upload a new report
         """
-        file_name = utils.get_unique_filename()
-        request.files['report'].save(file_name)
-        upload_row = models.Upload.create(
-            status="NOT TREATED",
-            path=file_name,
-            message="File has been created, loading in MegaQC is queued.",
-            user_id=user.user_id
-        )
-
-        return schemas.UploadSchema(exclude=['path']).dump(upload_row)
+        return '', HTTPStatus.METHOD_NOT_ALLOWED
 
 
 class Report(Resource):
@@ -71,7 +135,7 @@ class Report(Resource):
         """
         Update this report
         """
-        raise NotImplementedError()
+        return '', HTTPStatus.METHOD_NOT_ALLOWED
 
     @check_admin
     def delete(self, report_id, user):
@@ -98,7 +162,9 @@ class ReportMeta(Resource):
         return schemas.ReportMetaSchema(many=True).dump(meta)
 
     def post(self, report_id):
-        return schemas.ReportMetaSchema(many=False).load(request.json)
+        data = schemas.ReportMetaSchema(many=False).load(request.json)
+        instance = models.ReportMeta.create(**data, report_id=report_id)
+        return schemas.ReportMetaSchema(many=False).dump(instance), HTTPStatus.CREATED
 
 
 class SamplesList(Resource):
@@ -125,7 +191,7 @@ class SamplesList(Resource):
 
     def post(self, report_id):
         # Currently we only support uploading samples via a report
-        raise NotImplementedError()
+        return {}, HTTPStatus.METHOD_NOT_ALLOWED
 
 
 class Sample(Resource):
@@ -184,7 +250,13 @@ class SampleData(Resource):
         return schemas.SampleDataSchema(many=True).dump(samples)
 
     def post(self, sample_id):
-        return schemas.SampleDataSchema(many=False).load(request.json)
+        loaded = schemas.SampleDataSchema(many=False).load(request.json)
+
+        # We get back the data type as a dictionary, so we need to convert it into a SampleDataType instance here
+        data_type = models.SampleDataType.get_or_create(loaded.pop('data_type'))
+
+        instance = models.SampleData.create(**loaded, data_type=data_type, sample_id=sample_id)
+        return schemas.SampleDataSchema(many=False).dump(instance), HTTPStatus.CREATED
 
 
 class UserList(Resource):
@@ -206,11 +278,13 @@ class UserList(Resource):
         """
         Create a new user
         """
-        data = schemas.UserSchema(exclude=['reports', 'salt', 'api_token']).load(request.json, session=db.session)
-        new_user = User(**data)
-        new_user.set_password(data.password)
+        data = schemas.UserSchema(exclude=['reports', 'salt', 'api_token']).load(request.json)
+        new_user = user_models.User(**data)
+        new_user.set_password(data['password'])
         new_user.active = True
         new_user.save()
+
+        return schemas.UserSchema().dump(new_user), HTTPStatus.CREATED
 
 
 class User(Resource):
@@ -236,7 +310,7 @@ class User(Resource):
         raise NotImplementedError()
 
     @check_admin
-    def delete(self, user_id):
+    def delete(self, user_id, user):
         """
         Delete a user
         """
@@ -307,16 +381,17 @@ class FilterList(Resource):
         return schemas.SampleFilterSchema(many=True).dump(results)
 
     @check_user
-    def post(self, user):
-        load_schema = schemas.SampleFilterSchema(many=False, exclude=('user', 'id'))
+    def post(self, user, user_id=None):
+        load_schema = schemas.SampleFilterSchema(many=False, exclude=['user'])
         dump_schema = schemas.SampleFilterSchema(many=False)
 
-        model = load_schema.load(request.json, session=db.session).data
-        model.user_id = user.user_id
-        db.session.add(model)
+        model = load_schema.load(request.json)
+        model['user_id'] = user.user_id
+        instance = models.SampleFilter(**model)
+        db.session.add(instance)
         db.session.commit()
 
-        return dump_schema.dump(model)
+        return dump_schema.dump(instance), HTTPStatus.CREATED
 
 
 class Filter(Resource):
@@ -342,14 +417,6 @@ class Filter(Resource):
     @check_user
     def put(self, filter_id, user, user_id=None):
         load_schema = schemas.SampleFilterSchema(many=False, exclude=('user', 'id'))
-
-        # Validate the incoming json
-        if request.json is None:
-            return {'errors': errors}, HTTPStatus.BAD_REQUEST
-
-        errors = load_schema.validate(request.json, session=db.session)
-        if len(errors) > 0:
-            return {'errors': errors}, HTTPStatus.BAD_REQUEST
 
         # Find an instance that meets the user_id and filter_id constraints
         query = db.session.query(
@@ -460,7 +527,7 @@ class TrendSeries(Resource):
                 showlegend=False,
             ))
 
-        return jsonify(plots)
+        return schemas.TrendSchema(many=True).dump(plots)
 
 
 # @restful.representation('application/json')
@@ -476,6 +543,8 @@ class TrendSeries(Resource):
 #     resp = make_response(json.dumps(ret), code)
 #     resp.headers.extend(headers or {})
 #     return resp
+restful.add_resource(UploadList, '/uploads', '/users/<int:user_id>/uploads')
+restful.add_resource(Upload, '/uploads/<int:upload_id>')
 
 restful.add_resource(ReportList, '/reports', '/users/<int:user_id>/reports')
 restful.add_resource(Report, '/reports/<int:report_id>')
