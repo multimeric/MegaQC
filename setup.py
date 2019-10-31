@@ -44,6 +44,8 @@ dev_reqs = [
     "WebTest==2.0.26",
     "factory-boy==2.8.1",
     "livereload==2.5.1",
+    "gql-query-builder>=0.1.5",
+    "inflection>=0.3.1",
 
     # Lint and code style
     #"flake8==3.3.0",
