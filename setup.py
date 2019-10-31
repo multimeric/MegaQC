@@ -35,6 +35,9 @@ dev_reqs = [
     "SQLAlchemy>=1.1.5",
     "Werkzeug==0.14.1",
     "WTForms>=2.1",
+    "graphene>=2.1.8",
+    "graphene-sqlalchemy>=2.2.2",
+    "Flask-GraphQL>=2.2.0",
 
     # Testing
     "pytest==3.0.6",

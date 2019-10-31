@@ -12,7 +12,7 @@ import logging
 import markdown
 
 from flask import Flask, jsonify, render_template, request
-from megaqc import commands, public, user, version, api
+from megaqc import commands, public, user, version, api, graphql
 from megaqc.extensions import cache, csrf_protect, db, debug_toolbar, login_manager
 from megaqc.scheduler import init_scheduler
 from megaqc.settings import ProdConfig, TestConfig
@@ -64,6 +64,7 @@ def register_blueprints(app):
     app.register_blueprint(user.views.blueprint)
     csrf_protect.exempt(api.views.api_blueprint)
     app.register_blueprint(api.views.api_blueprint)
+    app.register_blueprint(graphql.graphql_bp)
     return None
 
 
