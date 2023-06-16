@@ -1,4 +1,5 @@
 import JsonApiClient from "@holidayextras/jsonapi-client";
+import { useRef, useState, useEffect } from "react";
 
 /**
  * Returns an API client with an associated API key (synchronously).
@@ -41,4 +42,20 @@ export function getToken(client) {
   return client.get("users", "current").then((data) => {
     return data.toJSON().api_token;
   });
+}
+
+export function useClient() {
+  const client = useRef(getClient());
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    client.current.get("users", "current").then((user) => {
+      // Update the API token, and also store the current user
+      const token = user.toJSON().api_token;
+      client.current._transport._auth.header = { access_token: token };
+      setCurrentUser(user);
+    });
+  }, []);
+
+  return [client.current, currentUser];
 }

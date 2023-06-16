@@ -308,6 +308,13 @@ def distributions():
     )
 
 
+@blueprint.route("/table/")
+@login_required
+def table():
+    # Get the fields from the add-new-filters form
+    return render_template("public/react.html", entrypoint="table")
+
+
 @blueprint.route("/trends/")
 @login_required
 def trends():

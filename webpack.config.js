@@ -9,6 +9,7 @@ module.exports = {
     // This allows for multiple React "apps", for different pages
     trend: "./src/trend.js",
     admin: "./src/admin.js",
+    table: "./src/table.js",
   },
   module: {
     rules: [
